@@ -4,6 +4,7 @@ import FormInput from "../components/FormInput";
 import { specializationOptions } from "../constants/specializations";
 import {
   appointmentService,
+  billingService,
   doctorService,
   getErrorMessage,
   getStoredUser,
@@ -20,6 +21,7 @@ const initialForm = {
 function AppointmentsPage() {
   const user = getStoredUser();
   const [appointments, setAppointments] = useState([]);
+  const [billings, setBillings] = useState([]);
   const [patients, setPatients] = useState([]);
   const [doctors, setDoctors] = useState([]);
   const [currentPatient, setCurrentPatient] = useState(null);
@@ -31,13 +33,15 @@ function AppointmentsPage() {
   const loadData = useCallback(async () => {
     try {
       setError("");
-      const [appointmentsData, patientsData, doctorsData] = await Promise.all([
+      const [appointmentsData, billingsData, patientsData, doctorsData] = await Promise.all([
         appointmentService.getAll(),
+        billingService.getAll(),
         patientService.getAll(),
         doctorService.getAll()
       ]);
 
       setAppointments(appointmentsData);
+      setBillings(billingsData);
       setPatients(patientsData);
       setDoctors(doctorsData);
 
@@ -115,11 +119,26 @@ function AppointmentsPage() {
     }
   };
 
+  const handlePayment = async (billingId) => {
+    try {
+      setError("");
+      await billingService.updatePaymentStatus(billingId, "PAID");
+      setStatus("Payment marked as completed.");
+      loadData();
+    } catch (paymentError) {
+      setStatus("");
+      setError(getErrorMessage(paymentError));
+    }
+  };
+
   const getPatientName = (patientId) =>
     patients.find((patient) => patient.id === patientId)?.name || "Unknown Patient";
 
   const getDoctorName = (doctorId) =>
     doctors.find((doctor) => doctor.id === doctorId)?.name || "Unknown Doctor";
+
+  const getBilling = (appointmentId) =>
+    billings.find((billing) => billing.appointmentId === appointmentId);
 
   const visibleAppointments = appointments.filter((appointment) => {
     if (user?.role === "PATIENT") {
@@ -137,6 +156,7 @@ function AppointmentsPage() {
   const matchedDoctors = currentPatient
     ? doctors.filter((doctor) => doctor.specialization === selectedDisease)
     : doctors;
+  const selectedDoctor = doctors.find((doctor) => Number(formData.doctorId) === doctor.id);
 
   const columns = [
     {
@@ -160,6 +180,22 @@ function AppointmentsPage() {
     {
       key: "status",
       header: "Status"
+    },
+    {
+      key: "amount",
+      header: "Amount",
+      render: (row) => {
+        const billing = getBilling(row.id);
+        return billing ? `Rs. ${billing.amount}` : "-";
+      }
+    },
+    {
+      key: "paymentStatus",
+      header: "Payment",
+      render: (row) => {
+        const billing = getBilling(row.id);
+        return billing ? billing.paymentStatus : "-";
+      }
     }
   ];
 
@@ -225,6 +261,11 @@ function AppointmentsPage() {
                 onChange={handleChange}
               />
             </div>
+            {selectedDoctor && (
+              <p className="helper-inline">
+                Amount to pay: <strong>Rs. {selectedDoctor.consultationFee}</strong>
+              </p>
+            )}
             <div className="form-actions">
               <button type="submit" className="primary-button">
                 Send Request
@@ -249,27 +290,45 @@ function AppointmentsPage() {
         data={visibleAppointments}
         emptyMessage="No appointments found."
         renderActions={
-          user?.role === "DOCTOR"
-            ? (appointment) =>
-                appointment.status === "PENDING" ? (
-                  <>
-                    <button
-                      type="button"
-                      className="primary-button"
-                      onClick={() => handleStatusChange(appointment.id, "APPROVED")}
-                    >
-                      Accept
-                    </button>
-                    <button
-                      type="button"
-                      className="danger-button"
-                      onClick={() => handleStatusChange(appointment.id, "REJECTED")}
-                    >
-                      Reject
-                    </button>
-                  </>
-                ) : null
-            : undefined
+          (appointment) => {
+            const billing = getBilling(appointment.id);
+
+            if (user?.role === "PATIENT" && billing?.paymentStatus === "UNPAID") {
+              return (
+                <button
+                  type="button"
+                  className="primary-button"
+                  onClick={() => handlePayment(billing.id)}
+                >
+                  Pay Now
+                </button>
+              );
+            }
+
+            if (user?.role === "DOCTOR" && appointment.status === "PENDING") {
+              return (
+                <>
+                  <button
+                    type="button"
+                    className="primary-button"
+                    onClick={() => handleStatusChange(appointment.id, "APPROVED")}
+                    disabled={billing?.paymentStatus !== "PAID"}
+                  >
+                    Accept
+                  </button>
+                  <button
+                    type="button"
+                    className="danger-button"
+                    onClick={() => handleStatusChange(appointment.id, "REJECTED")}
+                  >
+                    Reject
+                  </button>
+                </>
+              );
+            }
+
+            return null;
+          }
         }
       />
     </div>

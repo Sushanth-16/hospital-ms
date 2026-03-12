@@ -39,4 +39,6 @@ public class RegisterRequest {
     private String disease;
 
     private String specialization;
+
+    private Integer consultationFee;
 }

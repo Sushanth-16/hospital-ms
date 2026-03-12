@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import StatCard from "../components/StatCard";
 import {
   appointmentService,
+  billingService,
   doctorService,
   getErrorMessage,
   getStoredUser,
@@ -9,6 +10,7 @@ import {
 } from "../services/api";
 
 function DashboardPage() {
+  const user = getStoredUser();
   const [stats, setStats] = useState({
     patients: 0,
     doctors: 0,
@@ -19,14 +21,13 @@ function DashboardPage() {
 
   useEffect(() => {
     const loadStats = async () => {
-      const user = getStoredUser();
-
       try {
         setError("");
-        const [patients, doctors, appointments] = await Promise.all([
+        const [patients, doctors, appointments, billings] = await Promise.all([
           patientService.getAll(),
           doctorService.getAll(),
-          appointmentService.getAll()
+          appointmentService.getAll(),
+          billingService.getAll()
         ]);
 
         const patientAppointments = user?.role === "PATIENT"
@@ -41,12 +42,18 @@ function DashboardPage() {
             : user?.role === "DOCTOR"
               ? doctorAppointments
               : appointments;
+        const visibleBillings =
+          user?.role === "PATIENT"
+            ? billings.filter((billing) => billing.patientId === user.referenceId)
+            : user?.role === "DOCTOR"
+              ? billings.filter((billing) => billing.doctorId === user.referenceId)
+              : billings;
 
         setStats({
           patients: user?.role === "ADMIN" ? patients.length : 1,
           doctors: user?.role === "ADMIN" ? doctors.length : 1,
           appointments: visibleAppointments.length,
-          billing: visibleAppointments.filter((appointment) => appointment.status === "APPROVED").length * 750
+          billing: visibleBillings.reduce((total, billing) => total + billing.amount, 0)
         });
       } catch (loadError) {
         setError(getErrorMessage(loadError));
@@ -91,11 +98,18 @@ function DashboardPage() {
       </div>
 
       <div className="panel">
-        <h3>Quick Overview</h3>
+        <h3>
+          {user?.role === "ADMIN" && "Command Center"}
+          {user?.role === "DOCTOR" && "Doctor Focus"}
+          {user?.role === "PATIENT" && "Care Journey"}
+        </h3>
         <p>
-          This frontend now uses real backend APIs only. Configure
-          <code> REACT_APP_API_BASE_URL</code> if your server is not running at
-          <code> http://localhost:8080</code>.
+          {user?.role === "ADMIN" &&
+            "Track the full hospital flow from registrations to paid appointments, and keep operations balanced across doctors and patients."}
+          {user?.role === "DOCTOR" &&
+            "Review paid requests first, approve the right appointments, and keep your consultation queue moving without delays."}
+          {user?.role === "PATIENT" &&
+            "Choose the right specialist, complete payment, and follow your appointment request through approval to confirmation."}
         </p>
       </div>
     </div>

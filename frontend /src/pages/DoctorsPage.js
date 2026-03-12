@@ -96,6 +96,7 @@ function DoctorsPage() {
   const columns = [
     { key: "name", header: "Name" },
     { key: "specialization", header: "Specialization" },
+    { key: "consultationFee", header: "Fee" },
     { key: "phone", header: "Phone" },
     { key: "email", header: "Email" }
   ];

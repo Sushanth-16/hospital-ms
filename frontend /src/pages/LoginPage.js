@@ -49,8 +49,7 @@ function LoginPage() {
   return (
     <div className="auth-layout">
       <div className="auth-card">
-        <h2>Hospital Management System</h2>
-        <p>Sign in to access dashboard, records, and appointment management.</p>
+        <h2 className="auth-brand-title">HOSPITAL HUB</h2>
 
         {error && <div className="status-message error">{error}</div>}
 

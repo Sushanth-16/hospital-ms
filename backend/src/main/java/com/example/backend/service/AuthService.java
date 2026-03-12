@@ -21,6 +21,8 @@ import com.example.backend.repository.AppUserRepository;
 @Service
 public class AuthService {
 
+    private static final int DEFAULT_CONSULTATION_FEE = 800;
+
     private final AppUserRepository appUserRepository;
     private final PatientRepository patientRepository;
     private final DoctorRepository doctorRepository;
@@ -99,6 +101,7 @@ public class AuthService {
             doctor.setSpecialization(request.getSpecialization());
             doctor.setPhone(request.getPhone());
             doctor.setEmail(request.getEmail());
+            doctor.setConsultationFee(DEFAULT_CONSULTATION_FEE);
             return doctorRepository.save(doctor).getId();
         }
 

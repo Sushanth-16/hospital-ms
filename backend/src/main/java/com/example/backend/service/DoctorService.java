@@ -11,6 +11,8 @@ import com.example.backend.repository.DoctorRepository;
 @Service
 public class DoctorService {
 
+    private static final int DEFAULT_CONSULTATION_FEE = 800;
+
     private final DoctorRepository doctorRepository;
 
     public DoctorService(DoctorRepository doctorRepository) {
@@ -27,6 +29,7 @@ public class DoctorService {
     }
 
     public Doctor createDoctor(Doctor doctor) {
+        doctor.setConsultationFee(DEFAULT_CONSULTATION_FEE);
         return doctorRepository.save(doctor);
     }
 
@@ -36,6 +39,7 @@ public class DoctorService {
         existingDoctor.setSpecialization(doctor.getSpecialization());
         existingDoctor.setPhone(doctor.getPhone());
         existingDoctor.setEmail(doctor.getEmail());
+        existingDoctor.setConsultationFee(DEFAULT_CONSULTATION_FEE);
         return doctorRepository.save(existingDoctor);
     }
 

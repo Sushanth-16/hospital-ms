@@ -269,20 +269,30 @@ tbody tr:hover {
   place-items: center;
   padding: 24px;
   background:
-    radial-gradient(circle at top left, rgba(37, 99, 235, 0.18), transparent 28%),
-    radial-gradient(circle at bottom right, rgba(15, 23, 42, 0.12), transparent 32%),
+    linear-gradient(rgba(9, 18, 44, 0.58), rgba(9, 18, 44, 0.58)),
+    url("https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=1600&q=80"),
     linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%);
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
 }
 
 .auth-card {
   width: 100%;
   max-width: 430px;
   padding: 32px;
+  backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.92);
 }
 
 .auth-card h2 {
   margin-top: 0;
   margin-bottom: 8px;
+}
+
+.auth-brand-title {
+  font-weight: 800;
+  letter-spacing: 0.08em;
 }
 
 .auth-card p {

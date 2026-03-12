@@ -104,6 +104,17 @@ export const doctorService = {
   }
 };
 
+export const billingService = {
+  getAll: async (params = {}) => {
+    const response = await api.get("/billings", { params });
+    return response.data;
+  },
+  updatePaymentStatus: async (id, paymentStatus) => {
+    const response = await api.put(`/billings/${id}/payment-status`, { paymentStatus });
+    return response.data;
+  }
+};
+
 export const appointmentService = {
   getAll: async () => {
     const response = await api.get("/appointments");
