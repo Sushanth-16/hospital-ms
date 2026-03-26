@@ -61,7 +61,7 @@ function DashboardPage() {
     };
 
     loadStats();
-  }, []);
+  }, [user?.referenceId, user?.role]);
 
   return (
     <div>

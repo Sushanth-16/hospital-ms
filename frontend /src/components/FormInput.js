@@ -9,6 +9,7 @@ function FormInput({
   required = true
 }) {
   const isSelect = type === "select";
+  const isTextarea = type === "textarea";
 
   return (
     <div className="form-group">
@@ -22,6 +23,16 @@ function FormInput({
             </option>
           ))}
         </select>
+      ) : isTextarea ? (
+        <textarea
+          id={name}
+          name={name}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder || `Enter ${label.toLowerCase()}`}
+          required={required}
+          rows={4}
+        />
       ) : (
         <input
           id={name}

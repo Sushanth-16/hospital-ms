@@ -9,7 +9,8 @@ function Sidebar() {
   if (user?.role === "ADMIN") {
     links.push(
       { label: "Patients", path: "/patients" },
-      { label: "Doctors", path: "/doctors" }
+      { label: "Doctors", path: "/doctors" },
+      { label: "Billing", path: "/billing" }
     );
   }
 

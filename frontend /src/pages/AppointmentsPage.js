@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import DataTable from "../components/DataTable";
 import FormInput from "../components/FormInput";
 import { specializationOptions } from "../constants/specializations";
+import { analyzeSymptoms } from "../utils/symptomTriage";
 import {
   appointmentService,
   billingService,
@@ -12,6 +13,7 @@ import {
 } from "../services/api";
 
 const initialForm = {
+  symptoms: "",
   disease: "",
   doctorId: "",
   appointmentDate: "",
@@ -27,6 +29,7 @@ function AppointmentsPage() {
   const [currentPatient, setCurrentPatient] = useState(null);
   const [currentDoctor, setCurrentDoctor] = useState(null);
   const [formData, setFormData] = useState(initialForm);
+  const [recommendation, setRecommendation] = useState(null);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
 
@@ -65,7 +68,42 @@ function AppointmentsPage() {
 
   const handleChange = (event) => {
     const { name, value } = event.target;
-    setFormData((current) => ({ ...current, [name]: value }));
+    setFormData((current) => ({
+      ...current,
+      [name]: value,
+      ...(name === "symptoms" ? { disease: "", doctorId: "" } : {})
+    }));
+
+    if (name === "symptoms") {
+      setRecommendation(null);
+    }
+  };
+
+  const handleRecommendDoctor = () => {
+    const nextRecommendation = analyzeSymptoms(formData.symptoms);
+
+    if (!nextRecommendation) {
+      setStatus("");
+      setRecommendation(null);
+      setError("Please describe your symptoms before asking for a recommendation.");
+      return;
+    }
+
+    const recommendedDoctors = doctors.filter(
+      (doctor) => doctor.specialization === nextRecommendation.specialization
+    );
+
+    setError("");
+    setStatus("Doctor recommendation is ready based on the symptoms.");
+    setRecommendation({
+      ...nextRecommendation,
+      recommendedDoctors
+    });
+    setFormData((current) => ({
+      ...current,
+      disease: nextRecommendation.specialization,
+      doctorId: recommendedDoctors[0] ? String(recommendedDoctors[0].id) : ""
+    }));
   };
 
   const handleSubmit = async (event) => {
@@ -73,11 +111,18 @@ function AppointmentsPage() {
     setError("");
 
     try {
-      const nextDisease = formData.disease || currentPatient?.disease;
+      const nextDisease =
+        formData.disease || recommendation?.specialization || currentPatient?.disease;
 
       if (!nextDisease) {
         setStatus("");
-        setError("Please select a disease before requesting an appointment.");
+        setError("Please get a symptom-based recommendation before requesting an appointment.");
+        return;
+      }
+
+      if (!formData.doctorId) {
+        setStatus("");
+        setError("Please select a recommended doctor before requesting an appointment.");
         return;
       }
 
@@ -96,6 +141,7 @@ function AppointmentsPage() {
       });
       setStatus("Appointment request sent to the doctor.");
       setFormData(initialForm);
+      setRecommendation(null);
       loadData();
     } catch (submitError) {
       setStatus("");
@@ -152,10 +198,10 @@ function AppointmentsPage() {
     return true;
   });
 
-  const selectedDisease = formData.disease || currentPatient?.disease || "";
-  const matchedDoctors = currentPatient
-    ? doctors.filter((doctor) => doctor.specialization === selectedDisease)
-    : doctors;
+  const selectedDisease = formData.disease || recommendation?.specialization || "";
+  const matchedDoctors =
+    recommendation?.recommendedDoctors ||
+    doctors.filter((doctor) => doctor.specialization === selectedDisease);
   const selectedDoctor = doctors.find((doctor) => Number(formData.doctorId) === doctor.id);
 
   const columns = [
@@ -222,11 +268,19 @@ function AppointmentsPage() {
         <div className="panel">
           <h3>Request Appointment</h3>
           <p className="helper-inline">
-            Your disease category is <strong>{currentPatient.disease}</strong>. Only doctors with
-            that specialization are shown.
+            Describe your symptoms and get a doctor recommendation before sending the appointment
+            request.
           </p>
           <form onSubmit={handleSubmit}>
             <div className="form-grid">
+              <FormInput
+                label="Symptoms"
+                name="symptoms"
+                type="textarea"
+                value={formData.symptoms}
+                onChange={handleChange}
+                placeholder="Example: fever, chest pain, skin rash, headache, stomach pain"
+              />
               <FormInput
                 label="Disease"
                 name="disease"
@@ -234,6 +288,7 @@ function AppointmentsPage() {
                 value={formData.disease}
                 onChange={handleChange}
                 options={specializationOptions}
+                required={false}
               />
               <FormInput
                 label="Doctor"
@@ -245,6 +300,7 @@ function AppointmentsPage() {
                   value: doctor.id,
                   label: `${doctor.name} - ${doctor.specialization}`
                 }))}
+                required={false}
               />
               <FormInput
                 label="Date"
@@ -261,12 +317,33 @@ function AppointmentsPage() {
                 onChange={handleChange}
               />
             </div>
+            {recommendation && (
+              <div className="recommendation-card">
+                <h4>Recommended Specialty</h4>
+                <p>
+                  <strong>{recommendation.specialization}</strong> ({recommendation.confidence}{" "}
+                  confidence)
+                </p>
+                <p>{recommendation.explanation}</p>
+                {recommendation.alternatives.length > 0 && (
+                  <p>Alternatives: {recommendation.alternatives.join(", ")}</p>
+                )}
+                {recommendation.recommendedDoctors.length === 0 && (
+                  <p className="recommendation-warning">
+                    No doctor is currently available for this specialty.
+                  </p>
+                )}
+              </div>
+            )}
             {selectedDoctor && (
               <p className="helper-inline">
                 Amount to pay: <strong>Rs. {selectedDoctor.consultationFee}</strong>
               </p>
             )}
             <div className="form-actions">
+              <button type="button" className="secondary-button" onClick={handleRecommendDoctor}>
+                Recommend Doctor
+              </button>
               <button type="submit" className="primary-button">
                 Send Request
               </button>
